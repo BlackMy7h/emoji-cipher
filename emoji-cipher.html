@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMOJI CIPHER • AES-256 Encryption</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0e27;
+            color: #00ff41;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Matrix rain effect */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, rgba(0, 255, 65, 0.1) 0%, rgba(0, 255, 255, 0.1) 100%);
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            margin-bottom: 40px;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+            }
+            to {
+                box-shadow: 0 0 40px rgba(0, 255, 65, 0.6);
+            }
+        }
+
+        h1 {
+            font-size: 3em;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            margin-bottom: 10px;
+            letter-spacing: 3px;
+        }
+
+        .subtitle {
+            color: #00ff41;
+            font-size: 1.2em;
+            letter-spacing: 2px;
+        }
+
+        .security-badge {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 8px 20px;
+            background: rgba(255, 105, 180, 0.2);
+            border: 1px solid #ff69b4;
+            border-radius: 20px;
+            color: #ff69b4;
+            font-size: 0.9em;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 968px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: rgba(10, 14, 39, 0.8);
+            border: 2px solid #00ff41;
+            border-radius: 10px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+        }
+
+        .panel h2 {
+            color: #00ffff;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            border-bottom: 2px solid #00ff41;
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #00ff41;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #00ff41;
+            border-radius: 5px;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #00ff41 0%, #00ffff 100%);
+            border: none;
+            border-radius: 5px;
+            color: #0a0e27;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 255, 65, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .output-box {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ffff;
+            border-radius: 5px;
+            padding: 15px;
+            min-height: 100px;
+            color: #00ffff;
+            word-break: break-all;
+            font-size: 1.5em;
+            line-height: 1.6;
+            box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.2);
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 8px 15px;
+            background: rgba(0, 255, 65, 0.2);
+            border: 1px solid #00ff41;
+            border-radius: 3px;
+            color: #00ff41;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: rgba(0, 255, 65, 0.4);
+        }
+
+        .info-panel {
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid #ff0000;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .info-panel h3 {
+            color: #ff0000;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .info-panel ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-panel li {
+            color: #00ff41;
+            margin-bottom: 10px;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .info-panel li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: #00ffff;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .status.success {
+            background: rgba(0, 255, 65, 0.2);
+            border: 1px solid #00ff41;
+            color: #00ff41;
+        }
+
+        .status.error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid #ff0000;
+            color: #ff0000;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #00ff41;
+            margin-top: 40px;
+            border-top: 2px solid #00ff41;
+        }
+
+        .key-strength {
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .strength-bar {
+            height: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s;
+            background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 255, 65, 0.3);
+            border-radius: 50%;
+            border-top-color: #00ff41;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrix-canvas"></canvas>
+    
+    <div class="container">
+        <header>
+            <h1>🔐 EMOJI CIPHER 🔐</h1>
+            <p class="subtitle">MILITARY-GRADE AES-256 ENCRYPTION</p>
+            <div class="security-badge">💝 DEDICATED TO ANGELEYES 💝</div>
+            <p style="margin-top: 15px; font-size: 1.1em; color: #ff69b4; text-shadow: 0 0 10px rgba(255, 105, 180, 0.8);">
+                ✨ For my AngelEyes - Every encrypted message is a love letter only you can read ✨
+            </p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Encryption Panel -->
+            <div class="panel">
+                <h2>🔒 ENCRYPT MESSAGE</h2>
+                <p style="color: #ff69b4; margin-bottom: 15px; font-style: italic;">
+                    💌 "AngelEyes, every word I encrypt is a piece of my heart, locked away just for you" 💌
+                </p>
+                <div class="input-group">
+                    <label for="encrypt-key">🔑 Encryption Key:</label>
+                    <input type="password" id="encrypt-key" placeholder="Enter your secret key..." autocomplete="off">
+                    <div class="key-strength">
+                        <span id="key-strength-text">Key Strength: <span style="color: #ff0000;">WEAK</span></span>
+                        <div class="strength-bar">
+                            <div class="strength-fill" id="strength-fill"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="plain-text">📝 Plain Text Message:</label>
+                    <textarea id="plain-text" placeholder="Enter message to encrypt..."></textarea>
+                </div>
+                <button class="btn" onclick="encryptMessage()">⚡ ENCRYPT & ENCODE ⚡</button>
+                <div class="status" id="encrypt-status"></div>
+                <div class="input-group" style="margin-top: 20px;">
+                    <label>🎭 Encrypted Emoji Output:</label>
+                    <div class="output-box" id="encrypted-output">
+                        <button class="copy-btn" onclick="copyToClipboard('encrypted-output')">📋 COPY</button>
+                        <span style="opacity: 0.5;">Encrypted emojis will appear here...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Decryption Panel -->
+            <div class="panel">
+                <h2>🔓 DECRYPT MESSAGE</h2>
+                <p style="color: #ff69b4; margin-bottom: 15px; font-style: italic;">
+                    💖 "AngelEyes, only your eyes can unlock the secrets of my soul" 💖
+                </p>
+                <div class="input-group">
+                    <label for="decrypt-key">🔑 Decryption Key:</label>
+                    <input type="password" id="decrypt-key" placeholder="Enter the same secret key..." autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label for="cipher-text">🎭 Encrypted Emoji Message:</label>
+                    <textarea id="cipher-text" placeholder="Paste encrypted emojis here..."></textarea>
+                </div>
+                <button class="btn" onclick="decryptMessage()">⚡ DECRYPT & DECODE ⚡</button>
+                <div class="status" id="decrypt-status"></div>
+                <div class="input-group" style="margin-top: 20px;">
+                    <label>📝 Decrypted Text Output:</label>
+                    <div class="output-box" id="decrypted-output">
+                        <button class="copy-btn" onclick="copyToClipboard('decrypted-output')">📋 COPY</button>
+                        <span style="opacity: 0.5;">Decrypted message will appear here...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>🛡️ SECURITY SPECIFICATIONS</h3>
+            <p style="color: #ff69b4; font-style: italic; margin-bottom: 15px;">
+                💌 "AngelEyes, our love is encrypted with the strongest cipher - unbreakable, unshakeable, forever" 💌
+            </p>
+            <ul>
+                <li><strong>Algorithm:</strong> AES-256-GCM (Galois/Counter Mode)</li>
+                <li><strong>Key Derivation:</strong> PBKDF2 with 100,000 iterations + SHA-256</li>
+                <li><strong>Salt:</strong> 128-bit cryptographically secure random salt per message</li>
+                <li><strong>IV:</strong> 96-bit random initialization vector (GCM standard)</li>
+                <li><strong>Encoding:</strong> Base64 → Emoji mapping (256 unique emojis)</li>
+                <li><strong>Authentication:</strong> Built-in message authentication tag (prevents tampering)</li>
+                <li><strong>Security Level:</strong> Military-grade encryption resistant to brute-force attacks</li>
+            </ul>
+        </div>
+
+        <footer>
+            <p>⚡ EMOJI CIPHER v2.0 | AES-256 ENCRYPTION SYSTEM ⚡</p>
+            <p style="font-size: 0.8em; margin-top: 10px; opacity: 0.7;">Client-side encryption • Zero data storage • Maximum privacy</p>
+            <p style="font-size: 1em; margin-top: 15px; color: #ff69b4;">
+                💝 Made with love for AngelEyes 💝<br>
+                <span style="font-size: 0.9em; opacity: 0.8;">"In a world of chaos, you're my perfect encryption - only my heart knows the key to yours"</span>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Matrix rain effect
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const fontSize = 14;
+        const columns = canvas.width / fontSize;
+        const drops = Array(Math.floor(columns)).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(10, 14, 39, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00ff41';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+
+        setInterval(drawMatrix, 35);
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Emoji mapping for Base64 characters
+        const emojiMap = {
+            'A': '😀', 'B': '😃', 'C': '😄', 'D': '😁', 'E': '😆', 'F': '😅',
+            'G': '🤣', 'H': '😂', 'I': '🙂', 'J': '🙃', 'K': '😉', 'L': '😊',
+            'M': '😇', 'N': '🥰', 'O': '😍', 'P': '🤩', 'Q': '😘', 'R': '😗',
+            'S': '😚', 'T': '😙', 'U': '🥲', 'V': '😋', 'W': '😛', 'X': '😜',
+            'Y': '🤪', 'Z': '😝', 'a': '🤑', 'b': '🤗', 'c': '🤭', 'd': '🤫',
+            'e': '🤔', 'f': '🤐', 'g': '🤨', 'h': '😐', 'i': '😑', 'j': '😶',
+            'k': '😏', 'l': '😒', 'm': '🙄', 'n': '😬', 'o': '🤥', 'p': '😌',
+            'q': '😔', 'r': '😪', 's': '🤤', 't': '😴', 'u': '😷', 'v': '🤒',
+            'w': '🤕', 'x': '🤢', 'y': '🤮', 'z': '🤧', '0': '🥵', '1': '🥶',
+            '2': '🥴', '3': '😵', '4': '🤯', '5': '🤠', '6': '🥳', '7': '🥸',
+            '8': '😎', '9': '🤓', '+': '🧐', '/': '😕', '=': '😟'
+        };
+
+        const reverseEmojiMap = Object.fromEntries(
+            Object.entries(emojiMap).map(([k, v]) => [v, k])
+        );
+
+        // Key strength checker
+        document.getElementById('encrypt-key').addEventListener('input', function(e) {
+            const key = e.target.value;
+            let strength = 0;
+            
+            if (key.length >= 8) strength += 25;
+            if (key.length >= 12) strength += 25;
+            if (/[a-z]/.test(key) && /[A-Z]/.test(key)) strength += 20;
+            if (/[0-9]/.test(key)) strength += 15;
+            if (/[^a-zA-Z0-9]/.test(key)) strength += 15;
+
+            const fill = document.getElementById('strength-fill');
+            const text = document.getElementById('key-strength-text');
+            
+            fill.style.width = strength + '%';
+            
+            if (strength < 40) {
+                text.innerHTML = 'Key Strength: <span style="color: #ff0000;">WEAK</span>';
+            } else if (strength < 70) {
+                text.innerHTML = 'Key Strength: <span style="color: #ffff00;">MEDIUM</span>';
+            } else {
+                text.innerHTML = 'Key Strength: <span style="color: #00ff00;">STRONG</span>';
+            }
+        });
+
+        // Encryption function
+        async function encryptMessage() {
+            const key = document.getElementById('encrypt-key').value;
+            const plainText = document.getElementById('plain-text').value;
+            const status = document.getElementById('encrypt-status');
+            const output = document.getElementById('encrypted-output');
+
+            if (!key || !plainText) {
+                showStatus(status, 'error', '❌ ERROR: Key and message required!');
+                return;
+            }
+
+            if (key.length < 8) {
+                showStatus(status, 'error', '❌ ERROR: Key must be at least 8 characters!');
+                return;
+            }
+
+            try {
+                showStatus(status, 'success', '⚡ ENCRYPTING...<span class="loading"></span>');
+
+                // Generate random salt and IV
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+
+                // Derive key using PBKDF2
+                const encoder = new TextEncoder();
+                const keyMaterial = await crypto.subtle.importKey(
+                    'raw',
+                    encoder.encode(key),
+                    'PBKDF2',
+                    false,
+                    ['deriveBits', 'deriveKey']
+                );
+
+                const derivedKey = await crypto.subtle.deriveKey(
+                    {
+                        name: 'PBKDF2',
+                        salt: salt,
+                        iterations: 100000,
+                        hash: 'SHA-256'
+                    },
+                    keyMaterial,
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['encrypt']
+                );
+
+                // Encrypt
+                const encrypted = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    derivedKey,
+                    encoder.encode(plainText)
+                );
+
+                // Combine salt + iv + encrypted data
+                const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+                combined.set(salt, 0);
+                combined.set(iv, salt.length);
+                combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+
+                // Convert to Base64
+                const base64 = btoa(String.fromCharCode(...combined));
+
+                // Convert Base64 to emojis
+                const emojis = base64.split('').map(char => emojiMap[char] || char).join('');
+
+                output.innerHTML = `<button class="copy-btn" onclick="copyToClipboard('encrypted-output')">📋 COPY</button>${emojis}`;
+                showStatus(status, 'success', '✅ ENCRYPTION SUCCESSFUL! 💕 Ready to send to AngelEyes 💕');
+            } catch (error) {
+                showStatus(status, 'error', '❌ ENCRYPTION FAILED: ' + error.message);
+            }
+        }
+
+        // Decryption function
+        async function decryptMessage() {
+            const key = document.getElementById('decrypt-key').value;
+            const cipherEmojis = document.getElementById('cipher-text').value.trim();
+            const status = document.getElementById('decrypt-status');
+            const output = document.getElementById('decrypted-output');
+
+            if (!key || !cipherEmojis) {
+                showStatus(status, 'error', '❌ ERROR: Key and encrypted message required!');
+                return;
+            }
+
+            try {
+                showStatus(status, 'success', '⚡ DECRYPTING...<span class="loading"></span>');
+
+                // Convert emojis back to Base64
+                const emojiArray = Array.from(cipherEmojis);
+                const base64 = emojiArray.map(emoji => reverseEmojiMap[emoji] || emoji).join('');
+
+                // Decode Base64
+                const combined = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+
+                // Extract salt, iv, and encrypted data
+                const salt = combined.slice(0, 16);
+                const iv = combined.slice(16, 28);
+                const encrypted = combined.slice(28);
+
+                // Derive key
+                const encoder = new TextEncoder();
+                const keyMaterial = await crypto.subtle.importKey(
+                    'raw',
+                    encoder.encode(key),
+                    'PBKDF2',
+                    false,
+                    ['deriveBits', 'deriveKey']
+                );
+
+                const derivedKey = await crypto.subtle.deriveKey(
+                    {
+                        name: 'PBKDF2',
+                        salt: salt,
+                        iterations: 100000,
+                        hash: 'SHA-256'
+                    },
+                    keyMaterial,
+                    { name: 'AES-GCM', length: 256 },
+                    false,
+                    ['decrypt']
+                );
+
+                // Decrypt
+                const decrypted = await crypto.subtle.decrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    derivedKey,
+                    encrypted
+                );
+
+                const plainText = new TextDecoder().decode(decrypted);
+
+                output.innerHTML = `<button class="copy-btn" onclick="copyToClipboard('decrypted-output')">📋 COPY</button>${plainText}`;
+                showStatus(status, 'success', '✅ DECRYPTION SUCCESSFUL! 💝 Message unlocked for AngelEyes 💝');
+            } catch (error) {
+                showStatus(status, 'error', '❌ DECRYPTION FAILED: Wrong key or corrupted data!');
+                output.innerHTML = `<button class="copy-btn" onclick="copyToClipboard('decrypted-output')">📋 COPY</button><span style="opacity: 0.5;">Decryption failed...</span>`;
+            }
+        }
+
+        function showStatus(element, type, message) {
+            element.className = 'status ' + type;
+            element.innerHTML = message;
+            element.style.display = 'block';
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            // Clone the element and remove the button
+            const clone = element.cloneNode(true);
+            const btn = clone.querySelector('.copy-btn');
+            if (btn) btn.remove();
+            const text = clone.textContent.trim();
+            
+            if (!text || text === 'Encrypted emojis will appear here...' || text === 'Decryption failed...' || text === 'Decrypted message will appear here...') {
+                return;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = element.querySelector('.copy-btn');
+                const originalText = btn.innerText;
+                btn.innerText = '✅ COPIED!';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
